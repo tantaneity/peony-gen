@@ -23,6 +23,9 @@ public static class Petals
     private const float CentreLength = 0.95f;
     private const float InnerDome = 0.014f;
     private const float ExpandStagger = 0.5f;
+    private const float TiltJitter = 14.0f;
+    private const float CurlJitter = 30.0f;
+    private const float TwistJitter = 25.0f;
 
     private const float WiltStagger = 0.4f;
     private const float WiltSag = 35.0f;
@@ -100,6 +103,7 @@ public static class Petals
             Vector2 spot = Phyllotaxis.OnDisc(petal, settings.innerCount);
             float reach = spot.magnitude;
             Vector3 outward = new Vector3(spot.x, 0.0f, spot.y) / Mathf.Max(reach, 1e-4f);
+            Vector3 facing = Quaternion.AngleAxis(Noise.Signed(petal, settings.seed + 91) * TwistJitter, Vector3.up) * outward;
             float late = (1.0f - reach) * ExpandStagger;
             float expand = Curve.Step(late, late + 1.0f - ExpandStagger, settings.fluff);
             float wilt = Wilt(settings, petal, 81);
@@ -110,13 +114,14 @@ public static class Petals
             Build(mesh, settings, pose, new PetalPlan
             {
                 root = outward * (settings.coreRadius * InnerSpread * reach) + Vector3.up * (InnerDome * (1.0f - reach * reach)),
-                outward = outward,
-                tilt = Mathf.Lerp(CentreTilt, EdgeTilt, reach) * expand + WiltSlump * wilt * reach,
+                outward = facing,
+                tilt = (Mathf.Lerp(CentreTilt, EdgeTilt, reach) + Noise.Signed(petal, settings.seed + 93) * TiltJitter) * expand
+                       + WiltSlump * wilt * reach,
                 length = settings.innerLength * Mathf.Lerp(CentreLength, 1.0f, reach) * shrink
                          * (1.0f + Noise.Signed(petal, settings.seed + 87) * 0.15f),
                 width = settings.innerWidth * shrink * (1.0f + Noise.Signed(petal, settings.seed + 89) * 0.2f),
                 taper = 0.0f,
-                curl = InnerCurl * Mathf.Lerp(1.0f, 0.5f, wilt),
+                curl = (InnerCurl + Noise.Signed(petal, settings.seed + 95) * CurlJitter) * Mathf.Lerp(1.0f, 0.5f, wilt),
                 cup = InnerCup,
                 ruffle = InnerRuffle * expand,
                 body = Fade(settings, palette, body, wilt),
